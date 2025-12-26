@@ -9,7 +9,7 @@
     "dev": "bun run src/index.ts --hot",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'No linter configured yet'",
+    "lint": "eslint .",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "db:generate": "bunx prisma generate",
@@ -19,7 +19,8 @@
     "db:seed": "bunx prisma db seed",
     "generate:spec": "bun scripts/generate-spec.ts",
     "generate:openapi": "bunx openapi-typescript-codegen --input ../../packages/api-client/openapi-spec.json --output ../../packages/api-client/generated --client axios",
-    "generate:client": "bun run generate:spec && bun run generate:openapi",
+    "postprocess:openapi": "bun scripts/postprocess-openapi.ts",
+    "generate:client": "bun run generate:spec && bun run generate:openapi && bun run postprocess:openapi",
     "change-prisma": "bun scripts/change-prisma.ts"
   },
   "devDependencies": {

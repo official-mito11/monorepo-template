@@ -8,18 +8,21 @@
     "serve": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'No linter configured yet'"
+    "lint": "eslint ."
   },
   "dependencies": {
+    "@app/api-client": "workspace:*",
+    "@app/shared": "workspace:*",
     "@tanstack/react-devtools": "^0.7.11",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tanstack/react-router": "^1.143.11",
     "@tanstack/react-router-devtools": "^1.143.11",
+    "axios": "^1.13.2",
     "lucide-react": "^0.545.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "@bassbook/react": "^0.4.0"
+    "@bassbook/react": "^0.4.1"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.12",

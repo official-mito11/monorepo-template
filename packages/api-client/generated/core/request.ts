@@ -4,7 +4,7 @@
 /* eslint-disable */
 import axios from 'axios';
 import type { AxiosError, AxiosRequestConfig, AxiosResponse, AxiosInstance } from 'axios';
-import FormData from 'form-data';
+const FormDataCtor = globalThis.FormData;
 
 import { ApiError } from './ApiError';
 import type { ApiRequestOptions } from './ApiRequestOptions';
@@ -110,7 +110,11 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 
 export const getFormData = (options: ApiRequestOptions): FormData | undefined => {
     if (options.formData) {
-        const formData = new FormData();
+        if (!FormDataCtor) {
+            return undefined;
+        }
+
+        const formData = new FormDataCtor();
 
         const process = (key: string, value: any) => {
             if (isString(value) || isBlob(value)) {
@@ -152,7 +156,7 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         resolve(options, config.HEADERS),
     ]);
 
-    const formHeaders = typeof formData?.getHeaders === 'function' && formData?.getHeaders() || {}
+    const formHeaders = typeof (formData as any)?.getHeaders === 'function' && (formData as any)?.getHeaders() || {}
 
     const headers = Object.entries({
         Accept: 'application/json',

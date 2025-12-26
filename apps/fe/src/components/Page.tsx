@@ -1,9 +1,11 @@
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { View } from "@bassbook/react";
 
+import type { ReactNode } from "react";
+
 interface PageProps {
-  mobile?: React.ReactNode;
-  desktop?: React.ReactNode;
+  mobile?: ReactNode;
+  desktop?: ReactNode;
   breakpoint?: number;
   [key: string]: any;
 }
