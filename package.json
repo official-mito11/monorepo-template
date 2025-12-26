@@ -1,0 +1,34 @@
+{
+  "name": "monorepo-template",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "generate:prisma": "bun run --cwd apps/be db:generate",
+    "generate:client": "bun run --cwd apps/be generate:client",
+    "generate": "bun run generate:prisma && bun run generate:client",
+    "dev:be": "bun run --cwd apps/be dev",
+    "dev:fe": "bun run --cwd apps/fe dev",
+    "build:be": "bun run --cwd apps/be build",
+    "build:fe": "bun run --cwd apps/fe build",
+    "test:be": "bun run --cwd apps/be test",
+    "test:fe": "bun run --cwd apps/fe test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.7.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}
