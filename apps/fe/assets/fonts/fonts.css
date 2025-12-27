@@ -1,0 +1,12 @@
+@supports (font-variation-settings: normal) {
+  @font-face {
+    font-family: "Pretendard";
+    src:
+      local("Pretendard Variable"),
+      local("PretendardVariable"),
+      url("./PretendardVariable.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+}
