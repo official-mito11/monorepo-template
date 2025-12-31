@@ -2,9 +2,21 @@
 
 This backend uses a simple file-tree router.
 
+## Process types
+
+The backend supports multiple process types, each with its own routes directory:
+
+| Process Type | Routes Directory | Port |
+|-------------|-----------------|------|
+| `main` | `src/routes/` | 8000 |
+| `admin` | `src/routes-admin/` | 8001 |
+
+See [Architecture](./architecture.md) for more details on running different process types.
+
 ## Where routes live
 
-- `apps/be/src/routes/**`
+- Main API: `apps/be/src/routes/**`
+- Admin: `apps/be/src/routes-admin/**`
 
 ## File-to-path mapping
 
@@ -22,6 +34,7 @@ Notes:
 You can scope middleware (e.g. `jwt()`, `cookie()`, auth plugins) to a route subtree by adding:
 
 - `apps/be/src/routes/**/_middleware.ts`
+- `apps/be/src/routes-admin/**/_middleware.ts`
 
 The middleware in that directory will be applied to the directory and all nested routes.
 
@@ -52,4 +65,6 @@ export const handler = () => "OK";
 ## Implementation
 
 - Loader: `apps/be/src/routes/_loader.ts`
-- Registration entry: `apps/be/src/routes.ts` and `apps/be/src/index.ts`
+- App factory: `apps/be/src/app.ts`
+- Process config: `apps/be/src/config/process.ts`
+- Entry point: `apps/be/src/index.ts`

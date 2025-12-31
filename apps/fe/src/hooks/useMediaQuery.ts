@@ -17,9 +17,9 @@ export default function useMediaQuery(query: string): boolean {
       mql.addEventListener("change", handleEvent);
       return () => mql.removeEventListener("change", handleEvent);
     } else {
-      // @ts-ignore - addListener exists on older browsers
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       mql.addListener(update);
-      // @ts-ignore - removeListener exists on older browsers
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       return () => mql.removeListener(update);
     }
   }, [query]);

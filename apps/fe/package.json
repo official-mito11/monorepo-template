@@ -22,7 +22,7 @@
     "lucide-react": "^0.545.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "@bassbook/react": "^0.4.1"
+    "@bassbook/react": "^0.4.2"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.12",

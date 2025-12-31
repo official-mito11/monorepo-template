@@ -1,13 +1,12 @@
+import type Elysia from "elysia";
 import type { DocumentDecoration, MaybeArray } from "elysia";
-import type { BodyHandler, ContentType, IntersectIfObjectSchema, UnwrapRoute } from "elysia/types";
+import type { BodyHandler, ContentType } from "elysia/types";
 
 export type RouteMethod = "get" | "post" | "put" | "patch" | "delete" | "options" | "head";
 
 export type RouteOptions = {
   detail?: DocumentDecoration;
-  parse?: MaybeArray<
-    ContentType | BodyHandler<IntersectIfObjectSchema<UnwrapRoute<{}, {}, "/">, {}>>
-  >;
+  parse?: MaybeArray<ContentType | BodyHandler<object>>;
 
   tags?: DocumentDecoration["tags"];
   summary?: DocumentDecoration["summary"];
@@ -17,9 +16,9 @@ export type RouteOptions = {
   responseDescription?: string;
 };
 
-export type RouteHandler = (ctx: any) => any;
+export type RouteHandler = (ctx: unknown) => unknown;
 
-export type RouteMiddleware = (app: any) => any;
+export type RouteMiddleware = (app: Elysia) => Elysia;
 
 export type MiddlewareModule = {
   default?: RouteMiddleware;

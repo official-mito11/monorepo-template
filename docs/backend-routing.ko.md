@@ -2,9 +2,21 @@
 
 이 백엔드는 간단한 파일 트리 기반 라우터를 사용합니다.
 
+## 프로세스 타입
+
+백엔드는 여러 프로세스 타입을 지원하며, 각각 별도의 라우트 디렉토리를 가집니다:
+
+| 프로세스 타입 | 라우트 디렉토리 | 포트 |
+|-------------|-----------------|------|
+| `main` | `src/routes/` | 8000 |
+| `admin` | `src/routes-admin/` | 8001 |
+
+프로세스 타입 실행에 대한 자세한 내용은 [아키텍처](./architecture.ko.md)를 참조하세요.
+
 ## 라우트 위치
 
-- `apps/be/src/routes/**`
+- 메인 API: `apps/be/src/routes/**`
+- 어드민: `apps/be/src/routes-admin/**`
 
 ## 파일 경로 -> URL 경로 매핑
 
@@ -22,6 +34,7 @@
 `jwt()`, `cookie()` 같은 미들웨어/플러그인을 특정 라우트 하위 트리에만 적용하려면 아래 파일을 추가하면 됩니다.
 
 - `apps/be/src/routes/**/_middleware.ts`
+- `apps/be/src/routes-admin/**/_middleware.ts`
 
 해당 디렉터리(및 하위 디렉터리)의 라우트들에만 미들웨어가 적용됩니다.
 
@@ -52,4 +65,6 @@ export const handler = () => "OK";
 ## 구현 위치
 
 - 로더: `apps/be/src/routes/_loader.ts`
-- 등록 엔트리: `apps/be/src/routes.ts`, `apps/be/src/index.ts`
+- 앱 팩토리: `apps/be/src/app.ts`
+- 프로세스 설정: `apps/be/src/config/process.ts`
+- 진입점: `apps/be/src/index.ts`

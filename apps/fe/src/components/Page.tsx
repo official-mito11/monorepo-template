@@ -1,13 +1,12 @@
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { View } from "@bassbook/react";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
-interface PageProps {
+interface PageProps extends ComponentProps<typeof View> {
   mobile?: ReactNode;
   desktop?: ReactNode;
   breakpoint?: number;
-  [key: string]: any;
 }
 
 export const Page = ({ breakpoint = 480, ...props }: PageProps) => {

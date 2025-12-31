@@ -1,8 +1,8 @@
 import { Type } from "@sinclair/typebox";
 
-import { __transformDate__ } from "./__transformDate__";
-
-import { __nullable__ } from "./__nullable__";
+// These imports are kept for potential future use by prismabox generator
+import "./__transformDate__";
+import "./__nullable__";
 
 export const UserPlain = Type.Object(
   { id: Type.String(), createdAt: Type.Date(), updatedAt: Type.Date() },
