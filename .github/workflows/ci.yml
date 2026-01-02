@@ -26,6 +26,12 @@ jobs:
       - name: Format check
         run: bun run format:check
 
+      - name: Setup Default Env
+        run: cd apps/be && cp .env.example .env
+
+      - name: Generate Backend Prisma
+        run: bun run --cwd apps/be db:generate
+
       - name: Lint
         run: bun run lint
 
