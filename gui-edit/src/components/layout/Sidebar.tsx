@@ -1,6 +1,9 @@
 import { useUIStore } from "@/stores/ui";
 import { FileExplorer } from "@/components/explorer/FileExplorer";
 import { RouteExplorer } from "@/components/routes/RouteExplorer";
+import { ComponentToolbox } from "@/components/visual-editor/ComponentToolbox";
+import { GitStatusPanel } from "@/components/git/GitStatus";
+import { SearchPanel } from "@/components/search/SearchPanel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function Sidebar() {
@@ -17,23 +20,11 @@ export function Sidebar() {
       case "routes":
         return <RouteExplorer />;
       case "components":
-        return (
-          <div className="p-4 text-sm text-muted-foreground">
-            Component Toolbox (Coming soon)
-          </div>
-        );
+        return <ComponentToolbox />;
       case "search":
-        return (
-          <div className="p-4 text-sm text-muted-foreground">
-            Search (Coming soon)
-          </div>
-        );
+        return <SearchPanel />;
       case "git":
-        return (
-          <div className="p-4 text-sm text-muted-foreground">
-            Source Control (Coming soon)
-          </div>
-        );
+        return <GitStatusPanel />;
       default:
         return null;
     }

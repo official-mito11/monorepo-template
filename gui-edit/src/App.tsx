@@ -1,10 +1,16 @@
 import { useEffect } from "react";
 import { Shell } from "@/components/layout/Shell";
+import { CommandPalette } from "@/components/command-palette/CommandPalette";
+import { QuickOpen } from "@/components/command-palette/QuickOpen";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import "./styles/globals.css";
 
 function App() {
   const { theme, setProjectPath } = useWorkspaceStore();
+
+  // Register global keyboard shortcuts
+  useKeyboardShortcuts();
 
   // Apply theme class to document
   useEffect(() => {
@@ -19,7 +25,13 @@ function App() {
     setProjectPath(defaultPath);
   }, [setProjectPath]);
 
-  return <Shell />;
+  return (
+    <>
+      <Shell />
+      <CommandPalette />
+      <QuickOpen />
+    </>
+  );
 }
 
 export default App;

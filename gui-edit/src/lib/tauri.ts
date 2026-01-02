@@ -330,3 +330,73 @@ export async function readCargoToml(path: string): Promise<CargoToml> {
 export async function writeCargoToml(path: string, data: CargoToml): Promise<void> {
   return invoke<void>("write_cargo_toml", { path, data });
 }
+
+// Search Types
+export interface SearchResult {
+  filePath: string;
+  lineNumber: number;
+  lineContent: string;
+  matchStart?: number;
+  matchEnd?: number;
+}
+
+export interface SearchOptions {
+  regex?: boolean;
+  caseSensitive?: boolean;
+  includePatterns?: string[];
+  excludePatterns?: string[];
+}
+
+// Search Commands
+export async function searchInFiles(
+  rootPath: string,
+  query: string,
+  options?: SearchOptions
+): Promise<SearchResult[]> {
+  if (typeof window !== "undefined" && !("__TAURI__" in window)) {
+    return mockSearchInFiles(rootPath, query, options);
+  }
+  return invoke<SearchResult[]>("search_in_files", { rootPath, query, options });
+}
+
+// Mock search for development
+function mockSearchInFiles(
+  rootPath: string,
+  query: string,
+  options?: SearchOptions
+): Promise<SearchResult[]> {
+  const lowerQuery = options?.caseSensitive ? query : query.toLowerCase();
+
+  // Mock search results
+  const mockResults: SearchResult[] = [
+    {
+      filePath: `${rootPath}/apps/be/src/index.ts`,
+      lineNumber: 5,
+      lineContent: `const app = new Elysia();`,
+      matchStart: 6,
+      matchEnd: 9,
+    },
+    {
+      filePath: `${rootPath}/apps/be/src/index.ts`,
+      lineNumber: 10,
+      lineContent: `app.listen(3000);`,
+      matchStart: 0,
+      matchEnd: 3,
+    },
+    {
+      filePath: `${rootPath}/apps/fe/src/App.tsx`,
+      lineNumber: 1,
+      lineContent: `function App() {`,
+      matchStart: 9,
+      matchEnd: 12,
+    },
+  ];
+
+  // Filter mock results based on query
+  const filtered = mockResults.filter((r) => {
+    const content = options?.caseSensitive ? r.lineContent : r.lineContent.toLowerCase();
+    return content.includes(lowerQuery);
+  });
+
+  return Promise.resolve(filtered.length > 0 ? filtered : mockResults.slice(0, 2));
+}

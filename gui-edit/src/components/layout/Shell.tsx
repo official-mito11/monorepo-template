@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { EditorArea } from "./EditorArea";
 import { StatusBar } from "./StatusBar";
 import { ApiTester } from "@/components/routes/ApiTester";
+import { Terminal } from "@/components/terminal/Terminal";
 import { useUIStore } from "@/stores/ui";
 
 function ResizeHandle({ className = "" }: { className?: string }) {
@@ -48,11 +49,7 @@ function BottomPanel() {
 
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
-        {panelView === "terminal" && (
-          <div className="p-4 text-sm text-muted-foreground">
-            Terminal (Coming soon)
-          </div>
-        )}
+        {panelView === "terminal" && <Terminal />}
         {panelView === "problems" && (
           <div className="p-4 text-sm text-muted-foreground">
             No problems detected
