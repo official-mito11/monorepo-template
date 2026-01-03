@@ -12,7 +12,6 @@ export interface UIState {
 
   // Panel (bottom)
   panelVisible: boolean;
-  bottomPanelVisible: boolean; // alias for panelVisible
   panelView: PanelView;
   panelHeight: number;
 
@@ -40,7 +39,6 @@ export const useUIStore = create<UIState>()(
       sidebarView: "explorer",
       sidebarWidth: 260,
       panelVisible: false,
-      bottomPanelVisible: false,
       panelView: "terminal",
       panelHeight: 200,
       commandPaletteOpen: false,
@@ -64,8 +62,7 @@ export const useUIStore = create<UIState>()(
       },
 
       togglePanel: () => {
-        const visible = !get().panelVisible;
-        set({ panelVisible: visible, bottomPanelVisible: visible });
+        set({ panelVisible: !get().panelVisible });
       },
 
       setPanelView: (view) => {

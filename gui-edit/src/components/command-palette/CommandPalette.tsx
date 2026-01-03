@@ -162,7 +162,10 @@ export function CommandPalette() {
         label: "Open Settings",
         shortcut: "Ctrl+,",
         icon: <Settings size={16} />,
-        action: () => console.log("Settings not implemented"),
+        action: () => {
+          // TODO: Implement settings panel
+          console.debug("Open Settings requested");
+        },
         category: "Preferences",
       },
     ],
@@ -220,10 +223,7 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={closeCommandPalette}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={closeCommandPalette} />
 
       {/* Dialog */}
       <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[600px] max-w-[90vw]">
@@ -255,9 +255,7 @@ export function CommandPalette() {
                     <span className="text-muted-foreground">{cmd.icon}</span>
                     <span className="flex-1">{cmd.label}</span>
                     {cmd.shortcut && (
-                      <span className="text-xs text-muted-foreground">
-                        {cmd.shortcut}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{cmd.shortcut}</span>
                     )}
                   </Command.Item>
                 ))}

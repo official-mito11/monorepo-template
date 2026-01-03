@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 // File System Types
 export interface FileNode {
@@ -7,6 +8,36 @@ export interface FileNode {
   isDir: boolean;
   children?: FileNode[];
   extension?: string;
+}
+
+// Error types for file system operations
+export interface FsError {
+  code: string;
+  message: string;
+  path?: string;
+}
+
+// Helper to get project root from workspace store
+function getProjectRoot(): string | null {
+  try {
+    return useWorkspaceStore.getState().projectPath;
+  } catch {
+    return null;
+  }
+}
+
+// Helper to call Tauri commands with project root validation
+async function invokeWithProjectRoot<T>(
+  command: string,
+  path: string,
+  additionalPayload: Record<string, unknown> = {}
+): Promise<T> {
+  const projectRoot = getProjectRoot();
+  return invoke<T>(command, {
+    path,
+    projectRoot,
+    ...additionalPayload,
+  });
 }
 
 // Tauri namespace for convenience
@@ -36,7 +67,7 @@ export async function readDirectory(path: string): Promise<FileNode[]> {
   if (typeof window !== "undefined" && !("__TAURI__" in window)) {
     return mockReadDirectory(path);
   }
-  return invoke<FileNode[]>("read_directory", { path });
+  return invokeWithProjectRoot<FileNode[]>("read_directory", path);
 }
 
 // Mock implementation for development
@@ -56,9 +87,7 @@ function mockReadDirectory(path: string): Promise<FileNode[]> {
       name: "packages",
       path: `${path}/packages`,
       isDir: true,
-      children: [
-        { name: "shared", path: `${path}/packages/shared`, isDir: true },
-      ],
+      children: [{ name: "shared", path: `${path}/packages/shared`, isDir: true }],
     },
     { name: "package.json", path: `${path}/package.json`, isDir: false },
     { name: "README.md", path: `${path}/README.md`, isDir: false },
@@ -70,27 +99,27 @@ export async function readFile(path: string): Promise<string> {
   if (typeof window !== "undefined" && !("__TAURI__" in window)) {
     return `// Mock content for ${path}\n\nexport default function Example() {\n  return <div>Hello World</div>;\n}\n`;
   }
-  return invoke<string>("read_file", { path });
+  return invokeWithProjectRoot<string>("read_file", path);
 }
 
 export async function writeFile(path: string, content: string): Promise<void> {
-  return invoke<void>("write_file", { path, content });
+  return invokeWithProjectRoot<void>("write_file", path, { content });
 }
 
 export async function createFile(path: string, content?: string): Promise<void> {
-  return invoke<void>("create_file", { path, content });
+  return invokeWithProjectRoot<void>("create_file", path, { content });
 }
 
 export async function createDirectory(path: string): Promise<void> {
-  return invoke<void>("create_directory", { path });
+  return invokeWithProjectRoot<void>("create_directory", path);
 }
 
 export async function deletePath(path: string): Promise<void> {
-  return invoke<void>("delete_path", { path });
+  return invokeWithProjectRoot<void>("delete_path", path);
 }
 
 export async function renamePath(oldPath: string, newPath: string): Promise<void> {
-  return invoke<void>("rename_path", { oldPath, newPath });
+  return invokeWithProjectRoot<void>("rename_path", oldPath, { newPath });
 }
 
 // Route Analysis Types
@@ -150,7 +179,11 @@ export async function analyzeRoutesDirectory(dir: string): Promise<RouteAnalysis
 function mockAnalyzeRouteFile(path: string): RouteAnalysis {
   return {
     filePath: path,
-    urlPath: path.replace(/.*\/routes/, "").replace(/\.ts$/, "").replace(/\/index$/, "") || "/",
+    urlPath:
+      path
+        .replace(/.*\/routes/, "")
+        .replace(/\.ts$/, "")
+        .replace(/\/index$/, "") || "/",
     method: "GET",
     hasHandler: true,
     hasOptions: false,

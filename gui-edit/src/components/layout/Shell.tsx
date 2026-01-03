@@ -6,20 +6,24 @@ import { EditorArea } from "./EditorArea";
 import { StatusBar } from "./StatusBar";
 import { ApiTester } from "@/components/routes/ApiTester";
 import { Terminal } from "@/components/terminal/Terminal";
-import { useUIStore } from "@/stores/ui";
+import {
+  usePanelVisible,
+  usePanelView,
+  useSetPanelView,
+  useSidebarVisible,
+} from "@/stores/selectors";
 
 function ResizeHandle({ className = "" }: { className?: string }) {
   return (
-    <PanelResizeHandle
-      className={`group relative flex items-center justify-center ${className}`}
-    >
+    <PanelResizeHandle className={`group relative flex items-center justify-center ${className}`}>
       <div className="absolute inset-0 group-hover:bg-primary/20 group-active:bg-primary/30 transition-colors" />
     </PanelResizeHandle>
   );
 }
 
 function BottomPanel() {
-  const { panelView, setPanelView } = useUIStore();
+  const panelView = usePanelView();
+  const setPanelView = useSetPanelView();
 
   const tabs = [
     { id: "terminal" as const, label: "Terminal" },
@@ -51,14 +55,10 @@ function BottomPanel() {
       <div className="flex-1 overflow-hidden">
         {panelView === "terminal" && <Terminal />}
         {panelView === "problems" && (
-          <div className="p-4 text-sm text-muted-foreground">
-            No problems detected
-          </div>
+          <div className="p-4 text-sm text-muted-foreground">No problems detected</div>
         )}
         {panelView === "output" && (
-          <div className="p-4 text-sm text-muted-foreground">
-            No output
-          </div>
+          <div className="p-4 text-sm text-muted-foreground">No output</div>
         )}
         {panelView === "api-tester" && <ApiTester />}
       </div>
@@ -67,7 +67,8 @@ function BottomPanel() {
 }
 
 export function Shell() {
-  const { sidebarVisible, bottomPanelVisible } = useUIStore();
+  const sidebarVisible = useSidebarVisible();
+  const bottomPanelVisible = usePanelVisible();
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -82,12 +83,7 @@ export function Shell() {
             {/* Sidebar */}
             {sidebarVisible && (
               <>
-                <Panel
-                  defaultSize={20}
-                  minSize={15}
-                  maxSize={40}
-                  className="bg-sidebar"
-                >
+                <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-sidebar">
                   <Sidebar />
                 </Panel>
                 <ResizeHandle />

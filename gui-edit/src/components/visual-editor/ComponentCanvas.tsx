@@ -7,13 +7,13 @@ import {
   ComponentDefinition,
 } from "@/stores/component-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RenderedComponent, getRegistryEntry } from "./component-registry";
 
 interface CanvasComponentProps {
   component: DroppedComponent;
-  depth: number;
 }
 
-function CanvasComponent({ component, depth }: CanvasComponentProps) {
+function CanvasComponent({ component }: CanvasComponentProps) {
   const {
     selectedComponentId,
     hoveredComponentId,
@@ -21,131 +21,47 @@ function CanvasComponent({ component, depth }: CanvasComponentProps) {
     setHoveredComponent,
     removeComponent,
     addComponent,
-    availableComponents,
   } = useComponentEditorStore();
 
   const isSelected = selectedComponentId === component.id;
   const isHovered = hoveredComponentId === component.id;
-  const componentDef = availableComponents.find(
-    (c) => c.id === component.componentId
-  );
+
+  const registryEntry = getRegistryEntry(component.componentId);
+  const allowChildren = registryEntry?.allowChildren ?? false;
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       const data = e.dataTransfer.getData("component");
-      if (data && componentDef?.allowChildren) {
+      if (data && allowChildren) {
         const comp = JSON.parse(data) as ComponentDefinition;
         addComponent(comp, component.id);
       }
     },
-    [addComponent, component.id, componentDef]
+    [addComponent, component.id, allowChildren]
   );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
-      if (componentDef?.allowChildren) {
+      if (allowChildren) {
         e.preventDefault();
         e.stopPropagation();
       }
     },
-    [componentDef]
+    [allowChildren]
   );
 
-  const renderContent = () => {
-    const { children, className, variant, placeholder, src, alt, rows, type } =
-      component.props as Record<string, unknown>;
-
-    switch (component.componentId) {
-      case "div":
-      case "flex":
-      case "grid":
-      case "card":
-        return (
-          <div className={cn(className as string)}>
-            {component.children.length > 0 ? (
-              component.children.map((child) => (
-                <CanvasComponent
-                  key={child.id}
-                  component={child}
-                  depth={depth + 1}
-                />
-              ))
-            ) : (
-              <div className="min-h-[40px] border-2 border-dashed border-muted-foreground/30 rounded flex items-center justify-center text-xs text-muted-foreground">
-                Drop here
-              </div>
-            )}
-          </div>
-        );
-      case "button":
-        return (
-          <button
-            className={cn(
-              "px-4 py-2 rounded-md text-sm font-medium",
-              variant === "outline"
-                ? "border border-border hover:bg-accent"
-                : variant === "ghost"
-                  ? "hover:bg-accent"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-            )}
-          >
-            {children as string}
-          </button>
-        );
-      case "input":
-        return (
-          <input
-            type={(type as string) || "text"}
-            placeholder={placeholder as string}
-            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
-            readOnly
-          />
-        );
-      case "textarea":
-        return (
-          <textarea
-            placeholder={placeholder as string}
-            rows={(rows as number) || 3}
-            className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm resize-none"
-            readOnly
-          />
-        );
-      case "text":
-        return <p className={cn(className as string)}>{children as string}</p>;
-      case "heading":
-        return (
-          <h2 className={cn(className as string)}>{children as string}</h2>
-        );
-      case "image":
-        return (
-          <img
-            src={src as string}
-            alt={alt as string}
-            className={cn("max-w-full", className as string)}
-          />
-        );
-      case "badge":
-        return (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-              variant === "outline"
-                ? "border border-border"
-                : variant === "secondary"
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-primary text-primary-foreground"
-            )}
-          >
-            {children as string}
-          </span>
-        );
-      case "separator":
-        return <hr className={cn("border-border", className as string)} />;
-      default:
-        return <div>Unknown component</div>;
+  // For container components, render drop zone if no children
+  const renderDropZone = () => {
+    if (component.children.length === 0 && allowChildren) {
+      return (
+        <div className="min-h-[40px] border-2 border-dashed border-muted-foreground/30 rounded flex items-center justify-center text-xs text-muted-foreground">
+          Drop here
+        </div>
+      );
     }
+    return null;
   };
 
   return (
@@ -184,7 +100,11 @@ function CanvasComponent({ component, depth }: CanvasComponentProps) {
         </button>
       )}
 
-      {renderContent()}
+      {/* Render component from registry */}
+      <RenderedComponent component={component} />
+
+      {/* Drop zone for container components */}
+      {renderDropZone()}
     </div>
   );
 }
@@ -232,7 +152,7 @@ export function ComponentCanvas() {
           ) : (
             <div className="space-y-2 p-4 border border-border rounded-lg min-h-[400px]">
               {components.map((comp) => (
-                <CanvasComponent key={comp.id} component={comp} depth={0} />
+                <CanvasComponent key={comp.id} component={comp} />
               ))}
             </div>
           )}

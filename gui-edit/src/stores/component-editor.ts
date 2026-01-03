@@ -36,6 +36,9 @@ export interface ComponentEditorState {
   moveComponent: (id: string, newParentId: string | null, newIndex: number) => void;
   clearCanvas: () => void;
   setComponents: (components: DroppedComponent[]) => void;
+
+  // Selector for O(1) component lookup
+  getComponentById: (id: string) => DroppedComponent | null;
 }
 
 // Default shadcn components
@@ -117,7 +120,11 @@ const defaultComponents: ComponentDefinition[] = [
     name: "Image",
     category: "Media",
     icon: "Image",
-    defaultProps: { src: "https://via.placeholder.com/150", alt: "placeholder", className: "rounded" },
+    defaultProps: {
+      src: "https://via.placeholder.com/150",
+      alt: "placeholder",
+      className: "rounded",
+    },
     allowChildren: false,
   },
   {
@@ -142,75 +149,17 @@ function generateId(): string {
   return `comp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
-function removeComponentFromTree(components: DroppedComponent[], id: string): DroppedComponent[] {
-  return components
-    .filter((c) => c.id !== id)
-    .map((c) => ({
-      ...c,
-      children: removeComponentFromTree(c.children, id),
-    }));
-}
-
-function findComponent(components: DroppedComponent[], id: string): DroppedComponent | null {
+// Recursive helper functions - these are pure and don't mutate external state
+function findComponentRecursive(
+  components: DroppedComponent[],
+  id: string
+): DroppedComponent | null {
   for (const comp of components) {
     if (comp.id === id) return comp;
-    const found = findComponent(comp.children, id);
+    const found = findComponentRecursive(comp.children, id);
     if (found) return found;
   }
   return null;
-}
-
-function updateComponentInTree(
-  components: DroppedComponent[],
-  id: string,
-  updater: (comp: DroppedComponent) => DroppedComponent
-): DroppedComponent[] {
-  return components.map((c) => {
-    if (c.id === id) {
-      return updater(c);
-    }
-    return {
-      ...c,
-      children: updateComponentInTree(c.children, id, updater),
-    };
-  });
-}
-
-function addComponentToParent(
-  components: DroppedComponent[],
-  newComponent: DroppedComponent,
-  parentId: string | null
-): DroppedComponent[] {
-  if (parentId === null) {
-    return [...components, newComponent];
-  }
-
-  return components.map((c) => {
-    if (c.id === parentId) {
-      return {
-        ...c,
-        children: [...c.children, newComponent],
-      };
-    }
-    return {
-      ...c,
-      children: addComponentToParent(c.children, newComponent, parentId),
-    };
-  });
-}
-
-// Cached component map for O(1) lookup
-const componentMap: Map<string, DroppedComponent> = new Map();
-
-function buildComponentMap(components: DroppedComponent[]): void {
-  componentMap.clear();
-  const traverse = (comps: DroppedComponent[]) => {
-    for (const comp of comps) {
-      componentMap.set(comp.id, comp);
-      traverse(comp.children);
-    }
-  };
-  traverse(components);
 }
 
 export const useComponentEditorStore = create<ComponentEditorState>((set, get) => ({
@@ -230,10 +179,21 @@ export const useComponentEditorStore = create<ComponentEditorState>((set, get) =
     };
 
     set((state) => {
-      const newComponents = addComponentToParent(state.components, newComponent, parentId);
-      buildComponentMap(newComponents);
+      // Add component to parent or root
+      const addToParent = (comps: DroppedComponent[]): DroppedComponent[] => {
+        if (parentId === null) {
+          return [...comps, newComponent];
+        }
+        return comps.map((c) => {
+          if (c.id === parentId) {
+            return { ...c, children: [...c.children, newComponent] };
+          }
+          return { ...c, children: addToParent(c.children) };
+        });
+      };
+
       return {
-        components: newComponents,
+        components: addToParent(state.components),
         selectedComponentId: newComponent.id,
       };
     });
@@ -241,10 +201,18 @@ export const useComponentEditorStore = create<ComponentEditorState>((set, get) =
 
   removeComponent: (id) => {
     set((state) => {
-      const newComponents = removeComponentFromTree(state.components, id);
-      buildComponentMap(newComponents);
+      // Remove component and its children from tree
+      const removeFromTree = (comps: DroppedComponent[]): DroppedComponent[] => {
+        return comps
+          .filter((c) => c.id !== id)
+          .map((c) => ({
+            ...c,
+            children: removeFromTree(c.children),
+          }));
+      };
+
       return {
-        components: newComponents,
+        components: removeFromTree(state.components),
         selectedComponentId: state.selectedComponentId === id ? null : state.selectedComponentId,
       };
     });
@@ -252,12 +220,17 @@ export const useComponentEditorStore = create<ComponentEditorState>((set, get) =
 
   updateComponentProps: (id, props) => {
     set((state) => {
-      const newComponents = updateComponentInTree(state.components, id, (comp) => ({
-        ...comp,
-        props: { ...comp.props, ...props },
-      }));
-      buildComponentMap(newComponents);
-      return { components: newComponents };
+      // Update props in tree
+      const updateInTree = (comps: DroppedComponent[]): DroppedComponent[] => {
+        return comps.map((c) => {
+          if (c.id === id) {
+            return { ...c, props: { ...c.props, ...props } };
+          }
+          return { ...c, children: updateInTree(c.children) };
+        });
+      };
+
+      return { components: updateInTree(state.components) };
     });
   },
 
@@ -270,46 +243,56 @@ export const useComponentEditorStore = create<ComponentEditorState>((set, get) =
   },
 
   moveComponent: (id, newParentId, newIndex) => {
-    const { components } = get();
-    const comp = findComponent(components, id);
-    if (!comp) return;
+    set((state) => {
+      // Find the component to move
+      const compToMove = findComponentRecursive(state.components, id);
+      if (!compToMove) return state;
 
-    // Remove from old position
-    let newComponents = removeComponentFromTree(components, id);
+      // Remove from current position
+      const removeFromTree = (comps: DroppedComponent[]): DroppedComponent[] => {
+        return comps
+          .filter((c) => c.id !== id)
+          .map((c) => ({
+            ...c,
+            children: removeFromTree(c.children),
+          }));
+      };
 
-    // Update parent reference
-    const movedComp = { ...comp, parentId: newParentId };
+      // Add to new position
+      const addToTree = (comps: DroppedComponent[]): DroppedComponent[] => {
+        if (newParentId === null) {
+          const newComps = [...comps];
+          newComps.splice(newIndex, 0, { ...compToMove, parentId: null });
+          return newComps;
+        }
+        return comps.map((c) => {
+          if (c.id === newParentId) {
+            const newChildren = [...c.children];
+            newChildren.splice(newIndex, 0, { ...compToMove, parentId: newParentId });
+            return { ...c, children: newChildren };
+          }
+          return { ...c, children: addToTree(c.children) };
+        });
+      };
 
-    // Add to new position
-    if (newParentId === null) {
-      newComponents.splice(newIndex, 0, movedComp);
-    } else {
-      newComponents = updateComponentInTree(newComponents, newParentId, (parent) => {
-        const newChildren = [...parent.children];
-        newChildren.splice(newIndex, 0, movedComp);
-        return { ...parent, children: newChildren };
-      });
-    }
-
-    buildComponentMap(newComponents);
-    set({ components: newComponents });
+      return { components: addToTree(removeFromTree(state.components)) };
+    });
   },
 
   clearCanvas: () => {
-    componentMap.clear();
     set({ components: [], selectedComponentId: null });
   },
 
   setComponents: (components) => {
-    buildComponentMap(components);
     set({ components });
   },
-}));
 
-// Selector for getting component by ID with O(1) lookup
-export function getComponentById(id: string): DroppedComponent | null {
-  return componentMap.get(id) || null;
-}
+  // Reactive component lookup using current store state
+  getComponentById: (id) => {
+    const state = get();
+    return findComponentRecursive(state.components, id);
+  },
+}));
 
 // Escape string for JSX attribute
 function escapeJSXString(str: string): string {

@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -131,23 +132,23 @@ pub fn analyze_route_file(file_path: &str, routes_dir: &str) -> RouteAnalysis {
     };
 
     // Regex patterns for exports
-    // Match: export const get = ...
-    let export_const_re =
-        Regex::new(r"export\s+const\s+(\w+)\s*[=:]").expect("Invalid regex");
-
-    // Match: export function get(...) or export async function get(...)
+    let export_const_re = Regex::new(r"export\s+const\s+(\w+)\s*[=:]").expect("Invalid regex");
     let export_fn_re =
         Regex::new(r"export\s+(?:async\s+)?function\s+(\w+)\s*\(").expect("Invalid regex");
-
-    // Match: export default
     let export_default_re = Regex::new(r"export\s+default\s+").expect("Invalid regex");
-
-    // Match: export { ... }
     let export_named_re = Regex::new(r"export\s*\{\s*([^}]+)\s*\}").expect("Invalid regex");
+    // JSDoc patterns for route metadata
+    let jsdoc_re = Regex::new(r"/\*\*([^*]*(?:\*(?!/)[^*]*)\*/").expect("Invalid regex");
+    let tag_re = Regex::new(r"@tags?\s*:\s*([^\n*]+)").expect("Invalid regex");
+    let summary_re = Regex::new(r"@summary\s*:\s*([^\n*]+)").expect("Invalid regex");
+    let description_re = Regex::new(r"@description\s*:\s*([^\n*]+)").expect("Invalid regex");
 
     // Analyze export const
     for cap in export_const_re.captures_iter(&content) {
-        let name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+        let name = cap
+            .get(1)
+            .map(|m| m.as_str().to_string())
+            .unwrap_or_default();
         let name_lower = name.to_lowercase();
 
         if HTTP_METHODS.contains(&name_lower.as_str()) {
@@ -186,7 +187,10 @@ pub fn analyze_route_file(file_path: &str, routes_dir: &str) -> RouteAnalysis {
 
     // Analyze export function
     for cap in export_fn_re.captures_iter(&content) {
-        let name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+        let name = cap
+            .get(1)
+            .map(|m| m.as_str().to_string())
+            .unwrap_or_default();
         let name_lower = name.to_lowercase();
 
         if HTTP_METHODS.contains(&name_lower.as_str()) {
@@ -227,7 +231,12 @@ pub fn analyze_route_file(file_path: &str, routes_dir: &str) -> RouteAnalysis {
     for cap in export_named_re.captures_iter(&content) {
         if let Some(exports_str) = cap.get(1) {
             for export_name in exports_str.as_str().split(',') {
-                let name = export_name.split(" as ").next().unwrap_or("").trim().to_string();
+                let name = export_name
+                    .split(" as ")
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
                 if name.is_empty() {
                     continue;
                 }
@@ -253,10 +262,45 @@ pub fn analyze_route_file(file_path: &str, routes_dir: &str) -> RouteAnalysis {
         }
     }
 
+    // Extract JSDoc metadata for RouteOptions
+    for jsdoc_match in jsdoc_re.captures_iter(&content) {
+        if let Some(jsdoc) = jsdoc_match.get(1) {
+            let jsdoc_content = jsdoc.as_str();
+
+            let tags = tag_re.captures(jsdoc_content).and_then(|cap| {
+                cap.get(1).map(|m| {
+                    m.as_str()
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .collect()
+                })
+            });
+
+            let summary = summary_re
+                .captures(jsdoc_content)
+                .and_then(|cap| cap.get(1).map(|m| m.as_str().trim().to_string()));
+
+            let description = description_re
+                .captures(jsdoc_content)
+                .and_then(|cap| cap.get(1).map(|m| m.as_str().trim().to_string()));
+
+            if tags.is_some() || summary.is_some() || description.is_some() {
+                analysis.options = Some(RouteOptions {
+                    tags,
+                    summary,
+                    description,
+                    request_schema: None,
+                    response_schemas: Vec::new(),
+                });
+                break; // Only use the first JSDoc block for options
+            }
+        }
+    }
+
     analysis
 }
 
-/// Analyzes all route files in a directory
+/// Analyzes all route files in a directory using walkdir for robust traversal
 pub fn analyze_routes_directory(routes_dir: &str) -> Vec<RouteAnalysis> {
     let mut analyses = Vec::new();
     let routes_path = Path::new(routes_dir);
@@ -265,47 +309,32 @@ pub fn analyze_routes_directory(routes_dir: &str) -> Vec<RouteAnalysis> {
         return analyses;
     }
 
-    fn collect_files(dir: &Path, files: &mut Vec<String>) {
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-
-                // Skip hidden files and directories
-                if path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().starts_with('.'))
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-
-                // Skip middleware files
-                if path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().starts_with('_'))
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-
-                if path.is_dir() {
-                    collect_files(&path, files);
-                } else if path
-                    .extension()
-                    .map(|e| e == "ts" || e == "tsx")
-                    .unwrap_or(false)
-                {
-                    files.push(path.to_string_lossy().to_string());
-                }
+    // Use walkdir for robust directory traversal
+    let walker = WalkDir::new(routes_dir)
+        .into_iter()
+        .filter_entry(|entry| {
+            // Skip hidden files and directories (except .env.example)
+            let name = entry.file_name().to_string_lossy();
+            !name.starts_with('.') || name == ".env.example"
+        })
+        .filter_map(|e| e.ok())
+        .filter(|entry| {
+            // Only process TypeScript files, skip middleware (starting with _)
+            if entry.file_type().is_dir() {
+                return true;
             }
+            let name = entry.file_name().to_string_lossy();
+            if name.starts_with('_') {
+                return false;
+            }
+            name.ends_with(".ts") || name.ends_with(".tsx")
+        });
+
+    for entry in walker {
+        if entry.file_type().is_file() {
+            let file_path = entry.path().to_string_lossy().to_string();
+            analyses.push(analyze_route_file(&file_path, routes_dir));
         }
-    }
-
-    let mut files = Vec::new();
-    collect_files(routes_path, &mut files);
-
-    for file in files {
-        analyses.push(analyze_route_file(&file, routes_dir));
     }
 
     // Sort by URL path

@@ -2,12 +2,15 @@ import { useEffect } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { QuickOpen } from "@/components/command-palette/QuickOpen";
-import { useWorkspaceStore } from "@/stores/workspace";
+import { useTheme, useProjectPath } from "@/stores/selectors";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useWorkspaceStore } from "@/stores/workspace";
 import "./styles/globals.css";
 
 function App() {
-  const { theme, setProjectPath } = useWorkspaceStore();
+  const theme = useTheme();
+  const projectPath = useProjectPath();
+  const setProjectPath = useWorkspaceStore((state) => state.setProjectPath);
 
   // Register global keyboard shortcuts
   useKeyboardShortcuts();
@@ -22,8 +25,10 @@ function App() {
     // In production, this would be set via Tauri file dialog
     // For now, we'll use the monorepo root as the default project
     const defaultPath = "/Users/sunwoo/work/monorepo-template";
-    setProjectPath(defaultPath);
-  }, [setProjectPath]);
+    if (!projectPath && typeof window !== "undefined" && !("__TAURI__" in window)) {
+      setProjectPath(defaultPath);
+    }
+  }, [projectPath, setProjectPath]);
 
   return (
     <>
